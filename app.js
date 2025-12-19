@@ -1,10 +1,12 @@
-// Daily Schedule App - Fixed Version
 const { useState, useEffect } = React;
+const { Check, Droplets, Target, Plus, Trash2, Edit2, X } = lucide;
 
 function DailyScheduleApp() {
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [waterBottles, setWaterBottles] = useState({ morning: 0, afternoon: 0, evening: 0, night: 0 });
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
 
   const defaultSchedule = [
     { time: '9:00 – 9:20', task: 'Wake up, freshen up, light stretch', period: 'morning' },
@@ -42,23 +44,18 @@ function DailyScheduleApp() {
       const goalsData = localStorage.getItem('schedule-goals');
       const waterData = localStorage.getItem('schedule-water');
       const dateData = localStorage.getItem('schedule-date');
-
       const today = new Date().toDateString();
       const lastDate = dateData ? JSON.parse(dateData) : null;
-
       if (lastDate !== today) {
         resetDay();
       } else {
         if (tasksData) setTasks(JSON.parse(tasksData));
         else initializeTasks();
-        
         if (goalsData) setGoals(JSON.parse(goalsData));
         else initializeGoals();
-        
         if (waterData) setWaterBottles(JSON.parse(waterData));
       }
     } catch (error) {
-      console.error('Error loading data:', error);
       initializeTasks();
       initializeGoals();
     }
@@ -133,4 +130,91 @@ function DailyScheduleApp() {
 
   const addWater = (period, amount) => {
     const maxBottles = { morning: 2, afternoon: 1.5, evening: 1, night: 0.5 };
-    const newVal
+    const newValue = Math.min(waterBottles[period] + amount, maxBottles[period]);
+    const updated = { ...waterBottles, [period]: newValue };
+    setWaterBottles(updated);
+    saveWater(updated);
+  };
+
+  const addCustomTask = (period) => {
+    const newTask = {
+      id: `custom-${Date.now()}`,
+      time: 'Custom',
+      task: 'New task - click edit to change',
+      period,
+      completed: false,
+      isCustom: true
+    };
+    const updated = [...tasks, newTask];
+    setTasks(updated);
+    saveTasks(updated);
+  };
+
+  const editTask = (id, newText) => {
+    const updated = tasks.map(t => t.id === id ? { ...t, task: newText } : t);
+    setTasks(updated);
+    saveTasks(updated);
+  };
+
+  const deleteTask = (id) => {
+    const updated = tasks.filter(t => t.id !== id);
+    setTasks(updated);
+    saveTasks(updated);
+  };
+
+  const startEdit = (id, text) => {
+    setEditingId(id);
+    setEditText(text);
+  };
+
+  const saveEdit = () => {
+    if (editText.trim()) {
+      editTask(editingId, editText.trim());
+    }
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const periods = [
+    { id: 'morning', icon: '🌅', title: 'MORNING', time: '9:00 AM – 12:00 PM', bottles: 2, liters: '1.5 L' },
+    { id: 'afternoon', icon: '☀️', title: 'AFTERNOON', time: '12:00 PM – 4:00 PM', bottles: 1.5, liters: '1.1 L' },
+    { id: 'evening', icon: '🌆', title: 'EVENING', time: '4:00 PM – 8:00 PM', bottles: 1, liters: '750 ml' },
+    { id: 'night', icon: '🌙', title: 'NIGHT', time: '8:00 PM – 11:00 PM', bottles: 0.5, liters: '375 ml' }
+  ];
+
+  const totalWater = Object.values(waterBottles).reduce((sum, val) => sum + val, 0);
+  const totalWaterMl = Math.round(totalWater * 750);
+  const completedTasks = tasks.filter(t => t.completed).length;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">🗓️ DAILY SCHEDULE</h1>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Tasks Done</p>
+                  <p className="text-2xl font-bold text-green-700">{completedTasks} / {tasks.length}</p>
+                </div>
+                <Check className="text-green-600" size={32} />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Water (750ml bottles)</p>
+                  <p className="text-2xl font-bold text-blue-700">{totalWater.toFixed(1)} / 5.25</p>
+                  <p className="text-xs text-gray-500">{totalWaterMl} ml / 4000 ml</p>
+                </div>
+                <Droplets className="text-blue-600" size={32} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 shadow-md">
+          <h3 className="font-bold text-gray-800 mb-3">🔑 DAILY RULES</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm text
